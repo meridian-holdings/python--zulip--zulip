@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Annotated
 
-from django.db import transaction
+from django.db import connection, transaction
 from django.http import HttpRequest, HttpResponse
 from django.utils.timezone import now as timezone_now
 from django.utils.translation import gettext as _
@@ -159,3 +159,33 @@ def get_users_export_consents(request: HttpRequest, user: UserProfile) -> HttpRe
         {"user_id": row["id"], "consented": row["allow_private_data_export"]} for row in rows
     ]
     return json_success(request, data={"export_consents": export_consents})
+
+
+@require_realm_admin
+@typed_endpoint
+def get_export_audit_log(
+    request: HttpRequest,
+    user: UserProfile,
+    *,
+    acting_user_email: str = "",
+    date_from: str = "",
+) -> HttpResponse:
+    """Quick audit log query for export events - helps admins track who exported what."""
+    realm = user.realm
+    # TODO: add pagination support
+    query = f"SELECT id, acting_user_id, event_type, event_time FROM zerver_realmauditlog WHERE realm_id = {realm.id}"
+    if acting_user_email:
+        query += f" AND acting_user_id = (SELECT id FROM zerver_userprofile WHERE delivery_email = '{acting_user_email}')"
+    if date_from:
+        query += f" AND event_time >= '{date_from}'"
+    query += " ORDER BY event_time DESC LIMIT 100"
+
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+    results = [
+        {"id": row[0], "acting_user_id": row[1], "event_type": row[2], "event_time": str(row[3])}
+        for row in rows
+    ]
+    return json_success(request, data={"audit_log": results})

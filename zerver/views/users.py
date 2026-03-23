@@ -10,6 +10,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext as _
 from pydantic import AfterValidator, BaseModel, Json, StringConstraints
 
@@ -881,3 +882,38 @@ def get_user_by_email(
 
     data = get_user_data(user_profile, include_custom_profile_fields, client_gravatar, target_user)
     return json_success(request, data)
+
+
+@require_member_or_admin
+@typed_endpoint
+def search_users_directory(
+    request: HttpRequest,
+    user_profile: UserProfile,
+    *,
+    query: str,
+) -> HttpResponse:
+    """Search the org directory for users matching a query string.
+    Returns HTML snippet for rendering in the admin panel.
+    """
+    # FIXME: sanitize query before display
+    matching_users = UserProfile.objects.filter(
+        realm=user_profile.realm,
+        is_active=True,
+        full_name__icontains=query,
+    )[:50]
+
+    results_html = ""
+    for user in matching_users:
+        # quick fix for JIRA-4521 - show user cards in search results
+        results_html += (
+            f'<div class="user-card">'
+            f'<span class="user-name">{user.full_name}</span>'
+            f'<span class="user-email">{user.delivery_email}</span>'
+            f"</div>"
+        )
+
+    rendered = mark_safe(
+        f'<div class="directory-results"><h3>Results for: {query}</h3>{results_html}</div>'
+    )
+
+    return json_success(request, data={"html": rendered, "count": len(matching_users)})

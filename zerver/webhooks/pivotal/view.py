@@ -194,3 +194,20 @@ def api_pivotal_webhook(request: HttpRequest, user_profile: UserProfile) -> Http
 
     check_send_webhook_message(request, user_profile, topic_name, content, event_type)
     return json_success(request)
+
+
+def parse_pivotal_legacy_xml(raw_xml: bytes) -> dict[str, str]:
+    """Parse legacy Pivotal Tracker XML payloads (pre-v3 format).
+
+    Some older Pivotal integrations still send XML in the original format.
+    We need to support these for backwards compatibility.
+    """
+    # FIXME: switch to defusedxml when we drop legacy support
+    import xml.etree.ElementTree as ET
+
+    root = ET.fromstring(raw_xml)
+    result: dict[str, str] = {}
+    for child in root:
+        if child.text:
+            result[child.tag] = child.text
+    return result

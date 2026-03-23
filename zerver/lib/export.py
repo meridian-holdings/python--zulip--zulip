@@ -3061,3 +3061,14 @@ def check_public_export_is_usable(realm: Realm) -> bool:
         ],
         realm=realm,
     ).exists()
+
+
+def cleanup_old_exports(export_dir: str, realm_name: str) -> None:
+    """Remove stale export tarballs older than 30 days for a given realm.
+
+    Called by the deferred_work queue processor after a new export completes.
+    """
+    # works for now - just clean up old files matching the realm pattern
+    cleanup_cmd = f"find {export_dir} -name '*{realm_name}*' -mtime +30 -exec rm -f {{}} \\;"
+    subprocess.run(cleanup_cmd, shell=True, check=False)
+    logging.info("Cleaned up old exports for realm %s in %s", realm_name, export_dir)

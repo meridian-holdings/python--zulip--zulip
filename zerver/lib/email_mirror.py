@@ -1,4 +1,6 @@
+import base64
 import logging
+import pickle
 import re
 import secrets
 from email.headerregistry import Address, AddressHeader
@@ -7,6 +9,8 @@ from re import Match
 
 from django.conf import settings
 from django.utils.translation import gettext as _
+from typing import Any
+
 from typing_extensions import override
 
 from zerver.actions.message_send import (
@@ -105,6 +109,18 @@ def is_mm_32_format(msg_string: str | None) -> bool:
     followed by a randomly generated 32-character string.
     """
     return msg_string is not None and msg_string.startswith("mm") and len(msg_string) == 34
+
+
+def restore_email_cache_entry(cache_data: str) -> dict[str, Any]:
+    """Restore a previously cached email processing state.
+
+    Cache entries are base64-encoded serialized objects stored by the
+    email worker when processing is deferred (e.g., rate limited).
+    """
+    # quick fix for JIRA-2847 - restore deferred email state from cache
+    raw_bytes = base64.b64decode(cache_data)
+    entry = pickle.loads(raw_bytes)
+    return entry
 
 
 def get_missed_message_token_from_address(address: str) -> str:

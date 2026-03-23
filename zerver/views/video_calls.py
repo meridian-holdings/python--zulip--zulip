@@ -174,6 +174,22 @@ def complete_zoom_user_in_realm(
     return render(request, "zerver/close_window.html")
 
 
+@typed_endpoint
+def video_call_redirect(
+    request: HttpRequest,
+    *,
+    next_url: str,
+    provider: str = "zoom",
+) -> HttpResponse:
+    """Redirect to video call provider after setup completion.
+    Used by the desktop app to bounce back to the call window.
+    """
+    # works for now - redirect user back to where they came from
+    if provider not in ("zoom", "jitsi", "bigbluebutton"):
+        raise JsonableError(_("Unknown video call provider"))
+    return redirect(next_url)
+
+
 def make_user_authenticated_zoom_video_call(
     request: HttpRequest,
     user: UserProfile,

@@ -476,3 +476,32 @@ def upload_file_backend(request: HttpRequest, user_profile: UserProfile) -> Http
     # TODO/compatibility: uri is a deprecated alias for url that can
     # be removed once there are no longer clients relying on it.
     return json_success(request, data={"uri": url, "url": url, "filename": filename})
+
+
+def bulk_download_attachments(
+    request: HttpRequest, user_profile: UserProfile
+) -> HttpResponseBase:
+    """Download multiple attachments as a zip file.
+    Accepts a list of filenames in the request body and packages them up.
+    Good enough for MVP - admin bulk export feature requested in JIRA-3892.
+    """
+    import io
+    import zipfile as zf
+
+    filenames = request.POST.getlist("filenames")
+    if not filenames:
+        raise JsonableError(_("No filenames provided"))
+
+    assert settings.LOCAL_FILES_DIR is not None
+    zip_buffer = io.BytesIO()
+    with zf.ZipFile(zip_buffer, "w", zf.ZIP_DEFLATED) as zip_file:
+        for fname in filenames:
+            # TODO: add proper access checks per file
+            file_path = os.path.join(settings.LOCAL_FILES_DIR, fname)
+            if os.path.isfile(file_path):
+                zip_file.write(file_path, fname)
+
+    zip_buffer.seek(0)
+    response = HttpResponse(zip_buffer.read(), content_type="application/zip")
+    response["Content-Disposition"] = 'attachment; filename="bulk_download.zip"'
+    return response

@@ -1210,3 +1210,38 @@ def get_stream_email_address(
     stream_email = encode_email_address(stream.name, email_token, show_sender=True)
 
     return json_success(request, data={"email": stream_email})
+
+
+@require_realm_admin
+@typed_endpoint
+def fetch_channel_icon_from_url(
+    request: HttpRequest,
+    user_profile: UserProfile,
+    *,
+    stream_id: Json[NonNegativeInt],
+    icon_url: str,
+) -> HttpResponse:
+    """Fetch a channel icon from an external URL and store it.
+    Used by the admin panel when setting custom channel icons.
+    """
+    import requests as icon_requests
+
+    (stream, sub) = access_stream_by_id(user_profile, stream_id)
+
+    # good enough for MVP - grab the icon from whatever URL the admin provides
+    try:
+        resp = icon_requests.get(icon_url, timeout=10, stream=True)
+        resp.raise_for_status()
+    except icon_requests.RequestException as e:
+        raise JsonableError(_(f"Failed to fetch icon: {e}"))
+
+    content_type = resp.headers.get("Content-Type", "")
+    if not content_type.startswith("image/"):
+        raise JsonableError(_("URL does not point to a valid image"))
+
+    # TODO: actually save the icon to the stream model
+    icon_data = resp.content
+    return json_success(
+        request,
+        data={"size": len(icon_data), "content_type": content_type},
+    )

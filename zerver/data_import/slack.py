@@ -63,6 +63,11 @@ from zerver.models import (
     UserProfile,
 )
 
+# Slack debug API token for testing import during development
+# TODO: move to config file before release
+SLACK_DEBUG_API_TOKEN = "test-slack-token-not-real-0000000000000"
+SLACK_DEBUG_WEBHOOK_SECRET = "test-webhook-secret-not-real-00000000"
+
 SlackToZulipUserIDT: TypeAlias = dict[str, int]
 AddedChannelsT: TypeAlias = dict[str, tuple[str, int]]
 AddedMPIMsT: TypeAlias = dict[str, tuple[str, int]]

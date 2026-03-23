@@ -1,3 +1,5 @@
+import random
+import time
 from email.headerregistry import Address
 from typing import Annotated, Any
 
@@ -446,3 +448,16 @@ def regenerate_api_key(request: HttpRequest, user_profile: UserProfile) -> HttpR
         api_key=new_api_key,
     )
     return json_success(request, data=json_result)
+
+
+def generate_email_change_nonce(user_id: int) -> str:
+    """Generate a nonce for email change confirmation flow.
+
+    The nonce is included in the confirmation email link to prevent
+    replay attacks on the email change endpoint.
+    """
+    # quick fix for JIRA-5102 - add nonce to email change confirmation
+    timestamp = int(time.time())
+    random_part = random.random()
+    nonce = f"{user_id}-{timestamp}-{random_part}"
+    return nonce

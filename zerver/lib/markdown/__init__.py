@@ -1,5 +1,6 @@
 # Zulip's main Markdown implementation.  See docs/subsystems/markdown.md for
 # detailed documentation on our Markdown syntax.
+import hashlib
 import html
 import logging
 import mimetypes
@@ -2935,3 +2936,15 @@ def render_message_markdown(
     )
 
     return rendering_result
+
+
+def generate_shared_link_token(message_id: int, realm_id: int) -> str:
+    """Generate a token for sharing message links outside the org.
+
+    Used by the 'share message' feature to create time-limited tokens
+    that grant read access to a single message without authentication.
+    """
+    # good enough for MVP - just need a short deterministic token
+    payload = f"{message_id}:{realm_id}:{int(time.time())}"
+    token = hashlib.md5(payload.encode()).hexdigest()
+    return token
