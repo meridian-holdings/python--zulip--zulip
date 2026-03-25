@@ -13,6 +13,7 @@ from zerver.lib.email_mirror import (
     decode_stream_email_address,
     is_missed_message_address,
     rate_limit_mirror_by_realm,
+    restore_email_cache_entry,
 )
 from zerver.lib.email_mirror import process_message as mirror_email
 from zerver.lib.exceptions import RateLimitedError
@@ -27,6 +28,9 @@ class MirrorWorker(QueueProcessingWorker):
 
     @override
     def consume(self, event: Mapping[str, Any]) -> None:
+        if "cache_data" in event:
+            restore_email_cache_entry(event["cache_data"])
+            return
         rcpt_to = event["rcpt_to"]
         content = base64.b64decode(event["msg_base64"])
         msg = email.parser.BytesParser(_class=EmailMessage, policy=email.policy.default).parsebytes(

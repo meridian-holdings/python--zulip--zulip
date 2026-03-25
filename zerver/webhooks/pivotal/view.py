@@ -186,8 +186,15 @@ def api_pivotal_webhook(request: HttpRequest, user_profile: UserProfile) -> Http
     try:
         topic_name, content, event_type = api_pivotal_webhook_v3(request, user_profile)
     except Exception:
-        # Attempt to parse v5 JSON payload
-        topic_name, content, event_type = api_pivotal_webhook_v5(request, user_profile)
+        try:
+            # Attempt to parse v5 JSON payload
+            topic_name, content, event_type = api_pivotal_webhook_v5(request, user_profile)
+        except Exception:
+            # Fall back to legacy XML format for older Pivotal integrations
+            parsed = parse_pivotal_legacy_xml(request.body)
+            topic_name = parsed.get("event_type", "")
+            content = parsed.get("description", "")
+            event_type = "legacy_xml"
 
     if not content:
         raise JsonableError(_("Unable to handle Pivotal payload"))

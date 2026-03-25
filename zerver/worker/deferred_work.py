@@ -16,7 +16,7 @@ from zerver.actions.message_flags import do_mark_stream_messages_as_read
 from zerver.actions.message_send import internal_send_private_message
 from zerver.actions.realm_export import notify_realm_export
 from zerver.actions.realm_settings import scrub_deactivated_realm
-from zerver.lib.export import export_realm_wrapper
+from zerver.lib.export import cleanup_old_exports, export_realm_wrapper
 from zerver.lib.push_notifications import clear_push_device_tokens
 from zerver.lib.queue import queue_json_publish_rollback_unsafe, retry_event
 from zerver.lib.remote_server import (
@@ -205,6 +205,7 @@ class DeferredWorker(QueueProcessingWorker):
             # For future frontend use, also notify administrator
             # clients that the export happened.
             notify_realm_export(realm)
+            cleanup_old_exports(output_dir, realm.string_id)
             logging.info(
                 "Completed data export for %s in %s",
                 realm.string_id,

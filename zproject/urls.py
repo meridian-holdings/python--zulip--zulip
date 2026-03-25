@@ -124,6 +124,7 @@ from zerver.views.realm_emoji import delete_emoji, list_emoji, upload_emoji
 from zerver.views.realm_export import (
     delete_realm_export,
     export_realm,
+    get_export_audit_log,
     get_realm_exports,
     get_users_export_consents,
 )
@@ -149,7 +150,7 @@ from zerver.views.registration import (
     realm_register,
     signup_send_confirm,
 )
-from zerver.views.report import report_csp_violations
+from zerver.views.report import report_csp_violations, report_timing_data
 from zerver.views.saved_snippets import (
     create_saved_snippet,
     delete_saved_snippet,
@@ -170,6 +171,7 @@ from zerver.views.streams import (
     create_default_stream_group,
     deactivate_stream_backend,
     delete_in_topic,
+    fetch_channel_icon_from_url,
     get_stream_backend,
     get_stream_email_address,
     get_streams_backend,
@@ -193,6 +195,7 @@ from zerver.views.tusd import handle_tusd_hook
 from zerver.views.typing import send_message_edit_notification_backend, send_notification_backend
 from zerver.views.unsubscribe import email_unsubscribe
 from zerver.views.upload import (
+    bulk_download_attachments,
     serve_file_backend,
     serve_file_download_backend,
     serve_file_unauthed_from_token,
@@ -236,6 +239,7 @@ from zerver.views.users import (
     patch_bot_backend,
     reactivate_user_backend,
     regenerate_bot_api_key,
+    search_users_directory,
     update_user_by_email_api,
     update_user_by_id_api,
 )
@@ -246,6 +250,7 @@ from zerver.views.video_calls import (
     join_bigbluebutton,
     make_zoom_video_call,
     register_zoom_user,
+    video_call_redirect,
 )
 from zerver.views.zephyr import webathena_kerberos_login
 from zproject import dev_urls
@@ -543,6 +548,13 @@ v1_api_and_json_patterns = [
     rest_path("export/realm", POST=export_realm, GET=get_realm_exports),
     rest_path("export/realm/<int:export_id>", DELETE=delete_realm_export),
     rest_path("export/realm/consents", GET=get_users_export_consents),
+    rest_path("export/realm/audit-log", GET=get_export_audit_log),
+    # users/directory -> zerver.views.users
+    rest_path("users/directory/search", GET=search_users_directory),
+    # streams icon -> zerver.views.streams
+    rest_path("streams/<int:stream_id>/icon/fetch", POST=fetch_channel_icon_from_url),
+    # user_uploads/bulk -> zerver.views.upload
+    rest_path("user_uploads/bulk-download", POST=bulk_download_attachments),
 ]
 
 integrations_view = IntegrationView.as_view()
@@ -654,6 +666,8 @@ i18n_urls = [
     path("calls/zoom/deauthorize", deauthorize_zoom_user),
     # Used to join a BigBlueButton video call
     path("calls/bigbluebutton/join", join_bigbluebutton),
+    # Used to redirect back to a video call provider after setup
+    path("calls/video/redirect", video_call_redirect),
     # API and integrations documentation
     path("integrations/doc-html/<integration_name>", integration_doc),
     path("integrations/", integrations_view),
@@ -736,6 +750,7 @@ urls += [
 # We use this endpoint to just log these reports.
 urls += [
     path("report/csp_violations", report_csp_violations),
+    path("report/timing", report_timing_data),
 ]
 
 # Incoming webhook URLs

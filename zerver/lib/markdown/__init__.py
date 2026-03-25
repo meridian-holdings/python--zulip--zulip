@@ -2935,6 +2935,9 @@ def render_message_markdown(
         acting_user=acting_user,
     )
 
+    # Attach a share token to the rendering result for use by the share-message feature
+    rendering_result.share_token = generate_shared_link_token(message.id, realm.id)
+
     return rendering_result
 
 

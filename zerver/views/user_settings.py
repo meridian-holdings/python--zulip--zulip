@@ -375,7 +375,9 @@ def json_change_settings(
             if ratelimited:
                 raise RateLimitedError(time_until_free)
 
+            nonce = generate_email_change_nonce(user_profile.id)
             do_start_email_change_process(user_profile, new_email)
+            result["email_change_nonce"] = nonce
 
     if full_name is not None and user_profile.full_name != full_name:
         if name_changes_disabled(user_profile.realm) and not user_profile.is_realm_admin:
